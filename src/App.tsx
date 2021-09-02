@@ -1,15 +1,76 @@
+import { useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
-import { NonStopWatch } from './components/NonStopWatch'
+import * as faceapi from 'face-api.js'
 import type { StyledFC } from './types'
+
+const WebcamFacer: StyledFC = (props) => {
+  const { className } = props
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const [hasFace, setHasFace] = useState(false)
+
+  useEffect(() => {
+    navigator.getUserMedia({ video: true }, async stream => {
+      const videoEl = videoRef.current
+
+      if (!videoEl) throw new Error('videoRef.current is null')
+
+      videoEl.srcObject = stream
+
+      videoEl.addEventListener('play', async () => {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('/models')
+        console.info('loadFromUri()')
+
+        const detectSingleFace = async () => {
+          try {
+            const detection = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
+
+            if ((detection?.score ?? 0) < 0.65) {
+              requestAnimationFrame(() => {
+                detectSingleFace()
+              })
+            } else {
+              console.info(detection?.score)
+              console.info(detection?.box)
+              setHasFace(true)
+            }
+          } catch (error) {
+            console.error(error)
+            detectSingleFace()
+          }
+        }
+
+        detectSingleFace()
+      })
+    }, e => {
+      console.error(e)
+    })
+  }, [])
+
+  return (
+    <div className={className}>
+      {hasFace && (
+        <div>
+          <button>
+            Start...!
+          </button>
+        </div>
+      )}
+      <video width={600} height={450} ref={videoRef} autoPlay />
+    </div>
+  )
+}
+const StyledWebcamFacer = styled(WebcamFacer)`
+  videp {
+    background-color: black;
+  }
+`
 
 const App: StyledFC = (props) => {
   const { className } = props
 
   return (
     <div className={className} data-testid="App">
-      <p>{'Hang in there, @Buddy...! :")'}</p>
-      <NonStopWatch startAt={new Date('2021-08-11T20:49:00.000Z').getTime()} />
-      <h4>{'Of #NFC'}</h4>
+      <StyledWebcamFacer />
     </div>
   )
 }
