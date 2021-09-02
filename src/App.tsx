@@ -24,14 +24,13 @@ const WebcamFacer: StyledFC = (props) => {
           try {
             const detection = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions())
 
-            if ((detection?.score ?? 0) < 0.65) {
+            if (detection) {
+              console.info(detection.box)
+              setHasFace(true)
+            } else {
               requestAnimationFrame(() => {
                 detectSingleFace()
               })
-            } else {
-              console.info(detection?.score)
-              console.info(detection?.box)
-              setHasFace(true)
             }
           } catch (error) {
             console.error(error)
